@@ -1,5 +1,4 @@
 package com.torryharris.employee.crud.verticles;
-
 import com.torryharris.employee.crud.model.Employee;
 import com.torryharris.employee.crud.model.Response;
 import com.torryharris.employee.crud.model.ResponseCodec;
@@ -13,25 +12,25 @@ import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
 
 public class ApiServer extends AbstractVerticle {
   private static final Logger logger = LogManager.getLogger(ApiServer.class);
   private static Router router;
   private EventbusEmployee eventbusEmployee;
   private Employee employees;
-
   @Override
   public void start(Promise<Void> startPromise) throws Exception {
     eventbusEmployee = new EventbusEmployee(vertx);
     router = Router.router(vertx);
     EventBus eventBus = getVertx().eventBus();
     eventBus.registerDefaultCodec(Response.class,new ResponseCodec());
-    // Attach a BodyHandler to parse request body and set upload to false
+
     router.route().handler(BodyHandler.create(false));
 
     router.get("/employees/:id")
@@ -115,20 +114,25 @@ public class ApiServer extends AbstractVerticle {
         });
       });
 
+      router.get("/employeees/:id") .handler(routingContext -> {
+        String id=routingContext.request().getParam("id");
+        vertx.eventBus().request("getc", id, reply -> {
+          System.out.println("employee list");
+          System.out.println(reply.result().body());
+          routingContext.response().end(reply.result().body().toString());
+        });
+      });
+
     router.post("/employees").consumes("*/json")
       .handler(routingContext -> {
         Employee employee=Json.decodeValue(routingContext.getBody(),Employee.class);
-
         vertx.eventBus().request("post",Json.encode(employee), reply -> {
           if (reply.succeeded()) {
             logger.info(reply.result().body());
             Response response = (Response) reply.result().body();
             HttpServerResponse serverResponse = routingContext.response();
-//            JsonObject jsonObject = new JsonObject();
-//            jsonObject.put("message","employee added successfully");
             serverResponse.putHeader("content-type", "application/json")
               .end((response.getResponseBody()));
-
           }
           else {
             HttpServerResponse serverResponse = routingContext.response();
@@ -144,21 +148,15 @@ public class ApiServer extends AbstractVerticle {
 
     router.get("/response/:id").handler(routingContext -> {
       String id = routingContext.request().getParam("id");
-
       vertx.eventBus().request("id", id, reply -> {
         if (reply.succeeded()) {
-
           Response response = (Response) reply.result().body();
           HttpServerResponse serverResponse = routingContext.response();
           serverResponse.putHeader("content-type","application/json");
           serverResponse.end(response.getResponseBody());
-          };
-
+          }
       });
     });
-
-
-
     HttpServerOptions options = new HttpServerOptions().setTcpKeepAlive(true);
   vertx.createHttpServer(options)
     .exceptionHandler(logger::catching)

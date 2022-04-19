@@ -14,19 +14,11 @@ public class EventbusEmployee extends AbstractVerticle {
   private static final Logger LOGGER = LogManager.getLogger(EventbusEmployee.class);
   private final Dao<Employee> employeeDao;
   public EventbusEmployee(Vertx vertx) {
-    employeeDao = new EmployeeJdbcDao(vertx) {
-      @Override
-      public void delete(String id) {
-
-      }
-    };
+    employeeDao = new EmployeeJdbcDao(vertx);
   }
-
-
 
   @Override
   public void start(Promise<Void> promise) throws Exception {
-
     vertx.eventBus().consumer("id", message -> {
       Response response = new Response();
       String id = ((String) message.body());
@@ -47,10 +39,7 @@ public class EventbusEmployee extends AbstractVerticle {
           employee.reply(Json.encode(emp));
           System.out.println("employee list");
         });
-
     });
-
-
     vertx.eventBus().consumer("delete", message -> {
       Promise<Response> responsePromise = Promise.promise();
       String id = ((String) message.body()).toString();
@@ -67,14 +56,11 @@ public class EventbusEmployee extends AbstractVerticle {
             .onSuccess(employees -> {
               response.setStatusCode(200).setResponseBody(Json.encode(employee));
       message.reply(response);
-
     })
         .onFailure(throwable -> {
           response.setStatusCode(400).setResponseBody(Utils.getErrorResponse("employee id not found").encode());
         });
           });
-
-
     vertx.eventBus().consumer("update", message -> {
       String messages = ((String) message.body());
       Employee employee = Json.decodeValue(messages, Employee.class);
@@ -82,9 +68,7 @@ public class EventbusEmployee extends AbstractVerticle {
       employeeDao.update(employee);
       message.reply(Json.encode(employee));
       message.reply("Employee updated successfully");
-
       });
-
   }
   }
 

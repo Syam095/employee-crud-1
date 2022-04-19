@@ -19,7 +19,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class EmployeeJdbcDao implements Dao<Employee> {
+public class EmployeeJdbcDao implements Dao<Employee> {
   private static final Logger LOGGER = LogManager.getLogger(EmployeeJdbcDao.class);
   private JDBCPool jdbcPool;
   private Employee employee;
@@ -130,10 +130,10 @@ return promise;
 
   @Override
   public void update(Employee employee) {
-    Promise<List<Employee>> promise= Promise.promise();
-    List<Employee> employees=new ArrayList<>();
+    Promise<List<Employee>> promise = Promise.promise();
+    List<Employee> employees = new ArrayList<>();
     jdbcPool.preparedQuery(PropertyFileUtils.getQuery(QueryNames.UPDATE_EMPLOYEE))
-      .execute(Tuple.of(employee.getName(),employee.getDesignation(),employee.getSalary(),employee.getId()))
+      .execute(Tuple.of(employee.getName(), employee.getDesignation(), employee.getSalary(), employee.getId()))
       .onSuccess(rows -> {
         for (Row row : rows) {
           Employee emp = new Employee();
@@ -150,34 +150,32 @@ return promise;
       });
 
 
+  }
+
+  @Override
+  public void delete(String id) {
+    Promise<List<Employee>> promise= Promise.promise();
+    List<Employee> employees=new ArrayList<>();
+    jdbcPool.preparedQuery(PropertyFileUtils.getQuery(QueryNames.DELETE_EMPLOYEE))
+      .execute(Tuple.of(id))
+      .onSuccess(rows -> {
+        for (Row row : rows) {
+          Employee emp = new Employee();
+          employee.setId(row.getLong("id"))
+            .setName(row.getString("name"))
+            .setDesignation(row.getString("designation"))
+            .setSalary(row.getLong("salary"))
+            .setUsername(row.getString("username"))
+            .setPassword(row.getString("password"));
+
+          employees.remove(employee);
+        }
+        promise.tryComplete(employees);
+      });
+
 
 
   }
-
-//  @Override
-//  public void delete(String id) {
-//    Promise<List<Employee>> promise= Promise.promise();
-//    List<Employee> employees=new ArrayList<>();
-//    jdbcPool.preparedQuery(PropertyFileUtils.getQuery(QueryNames.DELETE_EMPLOYEE))
-//      .execute(Tuple.of(id))
-//      .onSuccess(rows -> {
-//        for (Row row : rows) {
-//          Employee emp = new Employee();
-//          employee.setId(row.getLong("id"))
-//            .setName(row.getString("name"))
-//            .setDesignation(row.getString("designation"))
-//            .setSalary(row.getLong("salary"))
-//            .setUsername(row.getString("username"))
-//            .setPassword(row.getString("password"));
-//
-//          employees.remove(employee);
-//        }
-//        promise.tryComplete(employees);
-//      });
-//
-
-
-//  }
 
   private JDBCConnectOptions getJdbcConnectionOptions() {
     return new JDBCConnectOptions()
